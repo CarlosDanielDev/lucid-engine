@@ -37,13 +37,13 @@ lucid-engine/
 ├── Sources/
 │   ├── CStockfish/                   # C/C++ Stockfish target (Issue #1)
 │   │   ├── include/
-│   │   │   └── stockfish_bridge.h   # Public C header for Swift interop
+│   │   │   └── stockfish_bridge.h   # Public C header -- SFStatus, SFScoreType, SFAssessResult (Issue #2)
 │   │   └── src/
-│   │       ├── stockfish_bridge.c   # C bridge implementation
+│   │       ├── stockfish_bridge.c   # Thread-safe stub with full input validation (Issue #2)
 │   │       └── (stockfish sources)  # [planned] Stockfish C++ source files
 │   └── LucidEngine/                  # Swift public API target
 │       ├── Engine/
-│       │   ├── LucidEngine.swift     # Main actor skeleton (Issue #1)
+│       │   ├── LucidEngine.swift     # Main actor -- start/shutdown using SFStatus (Issue #2)
 │       │   └── EngineError.swift     # Error types (Issue #1)
 │       ├── Models/                   # [planned]
 │       │   ├── Score.swift           # [planned] Centipawns / mate-in-N
@@ -66,14 +66,16 @@ lucid-engine/
 ├── Tests/
 │   └── LucidEngineTests/
 │       ├── PackageStructureTests.swift      # SPM scaffold verification (Issue #1)
+│       ├── BridgingHeaderTests.swift        # 25 tests: constants, enums, lifecycle, preconditions (Issue #2)
 │       ├── EngineLifecycleTests.swift       # [planned] Init, start, stop, reinit
 │       ├── PositionAssessmentTests.swift    # [planned] Known positions, edge cases
 │       ├── MoveClassificationTests.swift    # [planned] CPL → classification mapping
 │       ├── GameAnalysisTests.swift          # [planned] Full pipeline tests
 │       └── PerformanceBenchmarkTests.swift  # [planned] Timing & memory benchmarks
-├── Package.swift                     # SPM manifest (CStockfish + LucidEngine, swift-tools-version: 6.2)
+├── Package.swift                     # SPM manifest -- CStockfish added to test target deps (Issue #2)
 ├── README.md                         # Project overview & quick start
 ├── directory-tree.md                 # This file
+├── .swift-version                    # Swift 6.2.4 toolchain pin
 ├── LICENSE                           # [planned] MIT
 └── .gitignore                        # Build artifacts, .DS_Store, etc.
 ```
@@ -83,7 +85,7 @@ lucid-engine/
 | Issue | Description | Status |
 |-------|-------------|--------|
 | #1 | SPM package scaffold -- CStockfish + LucidEngine targets, bridge header, actor skeleton | Done |
-| #2 | Stockfish C++ source integration and build pipeline | Planned |
+| #2 | Stockfish C bridging header -- SFStatus, SFScoreType, SFAssessResult, stub impl, 25 tests | Done |
 | #3 | UCI communication layer (pipe-based I/O) | Planned |
 | #4 | Evaluation models and score parsing | Planned |
 | #5 | Game analysis pipeline and move classification | Planned |

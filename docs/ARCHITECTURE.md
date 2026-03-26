@@ -46,12 +46,32 @@ LucidEngine compiles Stockfish as a C library and calls its assessment functions
 
 ```c
 // stockfish_bridge.h
-int stockfish_init(void);
-int stockfish_assess(const char* fen, int depth, AssessResult* result);
-void stockfish_cleanup(void);
+
+// Typed status codes -- no magic integers
+typedef enum { SF_OK = 0, SF_ERR_NOT_INITIALIZED = -1, SF_ERR_INVALID_FEN = -2,
+               SF_ERR_INVALID_DEPTH = -3, SF_ERR_NULL_POINTER = -4,
+               SF_ERR_SEARCH_FAILED = -5, SF_ERR_ALREADY_INIT = -6 } SFStatus;
+
+// Score discriminator (centipawns vs mate-in-N)
+typedef enum { SF_SCORE_CENTIPAWNS = 0, SF_SCORE_MATE = 1 } SFScoreType;
+
+// Result struct populated by sf_assess_position
+typedef struct {
+    SFScoreType score_type;
+    int         score;
+    char        best_move[8];       // UCI move, e.g. "e2e4\0"
+    char        pv[32][8];          // principal variation moves
+    int         pv_length;
+    int         depth;
+    long        nodes;
+} SFAssessResult;
+
+SFStatus sf_init(void);
+void     sf_cleanup(void);
+SFStatus sf_assess_position(const char* fen, int depth, SFAssessResult* out_result);
 ```
 
-Stockfish's assessment runs in-process but never touches stdout. Results come back via return values and output parameters.
+Stockfish's assessment runs in-process but never touches stdout. Results come back via a typed `SFStatus` return code and a caller-allocated `SFAssessResult` output parameter. This function is contractually forbidden from calling `dup2`, `freopen`, or writing to `stdout`/`stderr`.
 
 ---
 
@@ -70,19 +90,18 @@ iOS apps cannot spawn subprocesses (sandbox restriction), which eliminates the s
 ### How Bridging Works
 
 1. **CStockfish target** compiles Stockfish C++ sources with a C-compatible wrapper
-2. `stockfish_bridge.h` declares `extern "C"` functions callable from Swift
-3. SPM's `clang` module system makes these functions available to Swift via `import CStockfish`
+2. `stockfish_bridge.h` declares `extern "C"` functions callable from Swift, using `SFStatus`, `SFScoreType`, and `SFAssessResult` types
+3. SPM's `clang` module system makes these types and functions available to Swift via `import CStockfish`
 4. Swift calls C functions directly -- no serialization, no IPC overhead
 
 ```swift
 // In LucidEngine (Swift):
 import CStockfish
 
-let result = UnsafeMutablePointer<AssessResult>.allocate(capacity: 1)
-defer { result.deallocate() }
-
-let status = stockfish_assess(fen, Int32(depth), result)
-// Convert result to Swift types...
+var result = SFAssessResult()          // stack-allocated, zero-initialized
+let status = sf_assess_position(fen, Int32(depth), &result)
+guard status == SF_OK else { throw EngineError.initializationFailed }
+// result.score, result.score_type, result.best_move, result.pv_length are now valid
 ```
 
 ---
@@ -97,13 +116,25 @@ A Swift `actor` guarantees serial access:
 
 ```swift
 public actor LucidEngine {
-    private var isRunning = false
+    public private(set) var isInitialized = false
+
+    public func start() throws {
+        guard !isInitialized else { return }
+        let status = sf_init()
+        guard status == SF_OK || status == SF_ERR_ALREADY_INIT else {
+            throw EngineError.initializationFailed
+        }
+        isInitialized = true
+    }
 
     public func assess(fen: String, depth: Int) async throws -> Assessment {
         // Actor isolation guarantees this runs serially
         // No two assessments can overlap
-        guard isRunning else { throw EngineError.engineNotRunning }
-        return try performAssessment(fen: fen, depth: depth)
+        guard isInitialized else { throw EngineError.engineNotRunning }
+        var result = SFAssessResult()
+        let status = sf_assess_position(fen, Int32(depth), &result)
+        guard status == SF_OK else { throw EngineError.initializationFailed }
+        return Assessment(from: result)
     }
 }
 ```
@@ -193,20 +224,20 @@ Where `k` is a scaling factor (typically ~3.5) and `N` is the number of moves by
 C allocations from the Stockfish bridge must be paired with Swift cleanup:
 
 ```swift
-// Pattern: allocate, use, deallocate
-let result = UnsafeMutablePointer<AssessResult>.allocate(capacity: 1)
-defer { result.deallocate() }
-
-stockfish_assess(fen, depth, result)
-let assessment = Assessment(from: result.pointee)  // copy to Swift value type
-// result.deallocate() runs here via defer
+// Pattern: stack-allocate SFAssessResult, pass by inout reference
+var result = SFAssessResult()          // zero-initialized on the Swift stack
+let status = sf_assess_position(fen, Int32(depth), &result)
+guard status == SF_OK else { throw ... }
+let assessment = Assessment(from: result)  // copy fields into Swift value type
+// result goes out of scope here -- no manual deallocation needed
 ```
 
 **Rules:**
-1. Every `allocate()` has a `defer { deallocate() }` on the next line
-2. C strings passed to Stockfish use `withCString` (no manual allocation)
-3. `stockfish_cleanup()` is called in the actor's `deinit` or `shutdown()`
-4. All Stockfish global state (hash tables, etc.) is freed on cleanup
+1. `SFAssessResult` is always stack-allocated as `var result = SFAssessResult()` -- no `UnsafeMutablePointer` needed
+2. The C stub calls `memset(out_result, 0, sizeof(SFAssessResult))` before writing, guaranteeing no stale data
+3. C strings passed to Stockfish use `withCString` (no manual allocation)
+4. `sf_cleanup()` is called in the actor's `shutdown()` method
+5. All Stockfish global state (hash tables, etc.) is freed on cleanup
 
 ---
 
@@ -225,7 +256,7 @@ let assessment = Assessment(from: result.pointee)  // copy to Swift value type
 |           LucidEngine Actor               |
 |  (Serial executor -- one task at a time) |
 |                                           |
-|  stockfish_assess(fen, depth, &result)   |  <-- blocking C call
+|  sf_assess_position(fen, depth, &result) |  <-- blocking C call
 |  return Assessment(from: result)          |
 +------------------------------------------+
 ```

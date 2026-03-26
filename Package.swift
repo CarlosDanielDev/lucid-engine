@@ -30,7 +30,7 @@ let package = Package(
 
         .testTarget(
             name: "LucidEngineTests",
-            dependencies: ["LucidEngine"],
+            dependencies: ["LucidEngine", "CStockfish"],
             path: "Tests/LucidEngineTests"
         ),
     ]

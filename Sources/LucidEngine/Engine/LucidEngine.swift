@@ -10,7 +10,7 @@ public actor LucidEngine {
     public func start() throws {
         guard !isInitialized else { return }
         let status = sf_init()
-        guard status == 0 else {
+        guard status == SF_OK || status == SF_ERR_ALREADY_INIT else {
             throw EngineError.initializationFailed
         }
         isInitialized = true
