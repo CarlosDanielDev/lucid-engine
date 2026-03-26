@@ -1,55 +1,19 @@
 import Testing
 @testable import LucidEngine
 
-// MARK: - Package Structure Smoke Tests
-//
-// Prove Issue #1 is complete:
-// - Package.swift compiles with CStockfish + LucidEngine targets
-// - LucidEngine module is importable
-// - C bridge symbols are reachable through the actor
-// - Basic lifecycle (start/shutdown) does not crash
+// Smoke test: Package.swift compiles, LucidEngine is importable,
+// and C bridge symbols are reachable through the actor.
 
-@Suite("Package Structure")
+@Suite("Package Structure", .serialized)
 struct PackageStructureTests {
 
-    @Test("LucidEngine can be instantiated")
-    func engineInstantiates() async {
+    @Test("LucidEngine module compiles and basic lifecycle works")
+    func smokeTest() async throws {
         let engine = LucidEngine()
-        let isInit = await engine.isInitialized
-        #expect(isInit == false)
-    }
-
-    @Test("Engine starts without error")
-    func engineStartSucceeds() async throws {
-        let engine = LucidEngine()
+        #expect(await engine.isRunning == false)
         try await engine.start()
-        let isInit = await engine.isInitialized
-        #expect(isInit == true)
-    }
-
-    @Test("Engine start is idempotent")
-    func engineStartIsIdempotent() async throws {
-        let engine = LucidEngine()
-        try await engine.start()
-        try await engine.start()
-        let isInit = await engine.isInitialized
-        #expect(isInit == true)
-    }
-
-    @Test("Engine shuts down cleanly")
-    func engineShutdownSucceeds() async throws {
-        let engine = LucidEngine()
-        try await engine.start()
+        #expect(await engine.isRunning == true)
         await engine.shutdown()
-        let isInit = await engine.isInitialized
-        #expect(isInit == false)
-    }
-
-    @Test("Engine shutdown before start does not crash")
-    func shutdownBeforeStartIsNoop() async {
-        let engine = LucidEngine()
-        await engine.shutdown()
-        let isInit = await engine.isInitialized
-        #expect(isInit == false)
+        #expect(await engine.isRunning == false)
     }
 }

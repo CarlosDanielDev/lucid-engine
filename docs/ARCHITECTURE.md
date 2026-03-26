@@ -116,21 +116,36 @@ A Swift `actor` guarantees serial access:
 
 ```swift
 public actor LucidEngine {
-    public private(set) var isInitialized = false
+    public let configuration: EngineConfiguration
+    public private(set) var isRunning: Bool = false
+
+    public init(configuration: EngineConfiguration = .default) {
+        self.configuration = configuration
+    }
 
     public func start() throws {
-        guard !isInitialized else { return }
+        guard !isRunning else { return }
         let status = sf_init()
         guard status == SF_OK || status == SF_ERR_ALREADY_INIT else {
             throw EngineError.initializationFailed
         }
-        isInitialized = true
+        isRunning = true
+    }
+
+    public func shutdown() {
+        guard isRunning else { return }
+        sf_cleanup()
+        isRunning = false
+    }
+
+    func ensureRunning() throws {
+        guard isRunning else { throw EngineError.engineNotRunning }
     }
 
     public func assess(fen: String, depth: Int) async throws -> Assessment {
         // Actor isolation guarantees this runs serially
         // No two assessments can overlap
-        guard isInitialized else { throw EngineError.engineNotRunning }
+        try ensureRunning()
         var result = SFAssessResult()
         let status = sf_assess_position(fen, Int32(depth), &result)
         guard status == SF_OK else { throw EngineError.initializationFailed }

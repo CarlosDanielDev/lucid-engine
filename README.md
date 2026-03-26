@@ -79,8 +79,8 @@ for move in analysis.analyzedMoves {
 | `Accuracy` | White and black accuracy percentages |
 | `WinProbability` | Win / draw / loss probabilities |
 | `GamePhases` | Opening / middlegame / endgame move ranges |
-| `EngineConfiguration` | Threads, hash size, default depth |
-| `EngineError` | Initialization, invalid FEN, timeout, not running |
+| `EngineConfiguration` | defaultDepth, threadCount, hashSizeMB with validation preconditions |
+| `EngineError` | initializationFailed, engineNotRunning, invalidDepth, invalidFEN |
 
 ## Requirements
 
