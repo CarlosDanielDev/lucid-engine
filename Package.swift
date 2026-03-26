@@ -1,26 +1,37 @@
 // swift-tools-version: 6.2
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
-    name: "lucid-engine",
+    name: "LucidEngine",
+    platforms: [
+        .iOS(.v17),
+        .macOS(.v14),
+    ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "lucid-engine",
-            targets: ["lucid-engine"]
+            name: "LucidEngine",
+            targets: ["LucidEngine"]
         ),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "lucid-engine"
+            name: "CStockfish",
+            path: "Sources/CStockfish",
+            sources: ["src/"],
+            publicHeadersPath: "include"
         ),
+
+        .target(
+            name: "LucidEngine",
+            dependencies: ["CStockfish"],
+            path: "Sources/LucidEngine"
+        ),
+
         .testTarget(
-            name: "lucid-engineTests",
-            dependencies: ["lucid-engine"]
+            name: "LucidEngineTests",
+            dependencies: ["LucidEngine"],
+            path: "Tests/LucidEngineTests"
         ),
     ]
 )
