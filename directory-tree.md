@@ -20,17 +20,13 @@ lucid-engine/
 │   │   ├── implement.md
 │   │   ├── plan-feature.md
 │   │   └── pushup.md
-│   ├── hooks/
-│   │   └── notify.sh
 │   ├── skills/                       # Custom skills
 │   │   └── engine-patterns/
 │   │       ├── assessment.md
 │   │       ├── c-interop.md
 │   │       └── SKILL.md
 │   ├── CLAUDE.md                     # Project instructions
-│   ├── NEXT-SESSION.md              # Session bootstrap prompt
-│   ├── settings.json
-│   └── settings.local.json
+│   └── NEXT-SESSION.md              # Session bootstrap prompt
 ├── docs/
 │   ├── PRD.md                        # Product Requirements Document
 │   └── ARCHITECTURE.md              # Technical architecture blueprint
@@ -43,9 +39,10 @@ lucid-engine/
 │   │       └── (stockfish sources)  # [planned] Stockfish C++ source files
 │   └── LucidEngine/                  # Swift public API target
 │       ├── Engine/
-│       │   ├── LucidEngine.swift     # Main actor -- start/shutdown using SFStatus (Issue #2)
-│       │   └── EngineError.swift     # Error types (Issue #1)
-│       ├── Models/                   # [planned]
+│       │   ├── LucidEngine.swift     # Actor -- configuration, isRunning, start/shutdown/ensureRunning (Issue #3)
+│       │   └── EngineError.swift     # EngineError: initializationFailed, engineNotRunning, invalidDepth, invalidFEN -- Equatable (Issue #3)
+│       ├── Models/
+│       │   ├── EngineConfiguration.swift  # defaultDepth/threadCount/hashSizeMB with preconditions (Issue #3)
 │       │   ├── Score.swift           # [planned] Centipawns / mate-in-N
 │       │   ├── Move.swift            # [planned] From/to/promotion/UCI
 │       │   ├── Evaluation.swift      # [planned] Single position result
@@ -55,8 +52,7 @@ lucid-engine/
 │       │   ├── GameAnalysis.swift    # [planned] Full game result
 │       │   ├── Accuracy.swift        # [planned] White/black accuracy
 │       │   ├── WinProbability.swift  # [planned] Win/draw/loss percentages
-│       │   ├── GamePhases.swift      # [planned] Opening/middlegame/endgame ranges
-│       │   └── EngineConfiguration.swift  # [planned] Threads, hash, depth
+│       │   └── GamePhases.swift      # [planned] Opening/middlegame/endgame ranges
 │       └── Analysis/                 # [planned]
 │           ├── GameAnalyzer.swift    # [planned] Pipeline: FENs → GameAnalysis
 │           ├── AccuracyCalculator.swift  # [planned] CPL → accuracy percentage
@@ -65,13 +61,13 @@ lucid-engine/
 │           └── PhaseDetector.swift   # [planned] Piece count → game phase
 ├── Tests/
 │   └── LucidEngineTests/
-│       ├── PackageStructureTests.swift      # SPM scaffold verification (Issue #1)
-│       ├── BridgingHeaderTests.swift        # 25 tests: constants, enums, lifecycle, preconditions (Issue #2)
-│       ├── EngineLifecycleTests.swift       # [planned] Init, start, stop, reinit
-│       ├── PositionAssessmentTests.swift    # [planned] Known positions, edge cases
-│       ├── MoveClassificationTests.swift    # [planned] CPL → classification mapping
-│       ├── GameAnalysisTests.swift          # [planned] Full pipeline tests
-│       └── PerformanceBenchmarkTests.swift  # [planned] Timing & memory benchmarks
+│       ├── PackageStructureTests.swift          # SPM scaffold verification -- updated for isRunning, .serialized (Issue #3)
+│       ├── BridgingHeaderTests.swift            # 25 tests: constants, enums, lifecycle, preconditions (Issue #2)
+│       ├── LucidEngineLifecycleTests.swift      # 16 lifecycle tests: config, start, shutdown, restart, ensureRunning (Issue #3)
+│       ├── PositionAssessmentTests.swift        # [planned] Known positions, edge cases
+│       ├── MoveClassificationTests.swift        # [planned] CPL → classification mapping
+│       ├── GameAnalysisTests.swift              # [planned] Full pipeline tests
+│       └── PerformanceBenchmarkTests.swift      # [planned] Timing & memory benchmarks
 ├── Package.swift                     # SPM manifest -- CStockfish added to test target deps (Issue #2)
 ├── README.md                         # Project overview & quick start
 ├── directory-tree.md                 # This file
@@ -86,6 +82,6 @@ lucid-engine/
 |-------|-------------|--------|
 | #1 | SPM package scaffold -- CStockfish + LucidEngine targets, bridge header, actor skeleton | Done |
 | #2 | Stockfish C bridging header -- SFStatus, SFScoreType, SFAssessResult, stub impl, 25 tests | Done |
-| #3 | UCI communication layer (pipe-based I/O) | Planned |
+| #3 | LucidEngine actor with init/start/stop lifecycle -- EngineConfiguration, isRunning, ensureRunning(), 16 tests | Done |
 | #4 | Evaluation models and score parsing | Planned |
 | #5 | Game analysis pipeline and move classification | Planned |

@@ -1,6 +1,7 @@
-public enum EngineError: Error, Sendable {
+public enum EngineError: Error, Sendable, Equatable {
     case initializationFailed
-    case notInitialized
+    case engineNotRunning
+    case invalidConfiguration(String)
     case invalidDepth(Int)
     case invalidFEN
 }

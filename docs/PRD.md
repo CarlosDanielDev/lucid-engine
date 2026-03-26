@@ -98,8 +98,20 @@ LE-01 (Engine lifecycle)
 
 /// Thread-safe Stockfish wrapper. All engine access serialized via actor.
 public actor LucidEngine {
+    /// The configuration used to initialize this engine instance.
+    public let configuration: EngineConfiguration
+
+    /// Whether the engine has been started and is ready to process requests.
+    public private(set) var isRunning: Bool
+
     /// Initialize with optional configuration
     public init(configuration: EngineConfiguration = .default)
+
+    /// Start the engine. Calls sf_init() on the C side. Idempotent.
+    public func start() throws
+
+    /// Shutdown the engine and release all C resources. Idempotent.
+    public func shutdown()
 
     /// Evaluate a single position
     public func evaluate(fen: String, depth: Int = 18) async throws -> Evaluation
@@ -109,18 +121,15 @@ public actor LucidEngine {
 
     /// Analyze a complete game from an array of FEN positions
     public func analyzeGame(fens: [String], depth: Int = 18) async throws -> GameAnalysis
-
-    /// Shutdown the engine and free resources
-    public func shutdown()
 }
 
 // MARK: - Configuration
 
-public struct EngineConfiguration: Sendable {
+public struct EngineConfiguration: Sendable, Equatable {
     public static let `default`: EngineConfiguration
-    public let threads: Int          // default: 1
-    public let hashSizeMB: Int       // default: 16
-    public let depth: Int            // default: 18
+    public let threadCount: Int      // default: 1, range: 1...64
+    public let hashSizeMB: Int       // default: 64, range: 1...4096
+    public let defaultDepth: Int     // default: 18, range: 1...100
 }
 
 // MARK: - Evaluation Result
@@ -198,12 +207,11 @@ public struct WinProbability: Sendable {
 
 // MARK: - Errors
 
-public enum EngineError: Error, Sendable {
-    case initializationFailed(String)
-    case invalidFEN(String)
-    case evaluationTimeout
+public enum EngineError: Error, Sendable, Equatable {
+    case initializationFailed
     case engineNotRunning
-    case analysisInterrupted
+    case invalidDepth(Int)
+    case invalidFEN
 }
 ```
 

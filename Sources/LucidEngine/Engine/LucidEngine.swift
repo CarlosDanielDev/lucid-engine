@@ -2,24 +2,37 @@ internal import CStockfish
 
 public actor LucidEngine {
 
-    public private(set) var isInitialized = false
+    public let configuration: EngineConfiguration
 
-    public init() {}
+    public private(set) var isRunning: Bool = false
 
-    /// Idempotent. Safe to call multiple times.
+    public init(configuration: EngineConfiguration = .default) {
+        self.configuration = configuration
+    }
+
+    /// Start the engine. Calls `sf_init()` on the C side.
+    /// Idempotent — calling on an already-running engine is a no-op.
     public func start() throws {
-        guard !isInitialized else { return }
+        guard !isRunning else { return }
         let status = sf_init()
         guard status == SF_OK || status == SF_ERR_ALREADY_INIT else {
             throw EngineError.initializationFailed
         }
-        isInitialized = true
+        isRunning = true
     }
 
-    /// Callers must call shutdown() explicitly before releasing the engine.
+    /// Shut down the engine and release all C resources.
+    /// Idempotent — calling on a stopped engine is a safe no-op.
     public func shutdown() {
-        guard isInitialized else { return }
+        guard isRunning else { return }
         sf_cleanup()
-        isInitialized = false
+        isRunning = false
+    }
+
+    /// Throws if the engine is not running. Call at the top of every operation method.
+    func ensureRunning() throws {
+        guard isRunning else {
+            throw EngineError.engineNotRunning
+        }
     }
 }
