@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "url",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "alwaysThinkingEnabled": true,
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/notify.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
