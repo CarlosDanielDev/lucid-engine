@@ -3,5 +3,7 @@ public enum EngineError: Error, Sendable, Equatable {
     case engineNotRunning
     case invalidConfiguration(String)
     case invalidDepth(Int)
-    case invalidFEN
+    case invalidFEN(String)
+    case evaluationTimeout
+    case analysisInterrupted
 }

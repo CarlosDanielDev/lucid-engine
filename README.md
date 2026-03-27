@@ -80,7 +80,7 @@ for move in analysis.analyzedMoves {
 | `WinProbability` | Win / draw / loss probabilities |
 | `GamePhases` | Opening / middlegame / endgame move ranges |
 | `EngineConfiguration` | defaultDepth, threadCount, hashSizeMB with validation preconditions |
-| `EngineError` | initializationFailed, engineNotRunning, invalidDepth, invalidFEN |
+| `EngineError` | initializationFailed, engineNotRunning, invalidDepth, invalidFEN(String), invalidConfiguration(String), evaluationTimeout, analysisInterrupted |
 
 ## Requirements
 
