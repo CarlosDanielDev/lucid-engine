@@ -81,6 +81,85 @@ public actor LucidEngine {
         return assessment.bestMove
     }
 
+    // MARK: - Game Analysis
+
+    public func analyzeGame(fens: [String], depth: Int = 18) async throws -> GameAnalysis {
+        try ensureRunning()
+
+        guard !fens.isEmpty else {
+            throw EngineError.emptyFENArray
+        }
+
+        guard fens.count >= 2 else {
+            throw EngineError.insufficientPositions
+        }
+
+        var analyzedMoves: [AnalyzedMove] = []
+
+        for i in 0..<(fens.count - 1) {
+            try Task.checkCancellation()
+
+            let currentFEN = fens[i]
+            let nextFEN = fens[i + 1]
+
+            let assessment = try await evaluate(fen: currentFEN, depth: depth)
+
+            guard let movePlayed = FENDiff.detectMove(before: currentFEN, after: nextFEN) else {
+                continue
+            }
+
+            let bestScore = centipawnValue(of: assessment.score)
+
+            // Evaluate the position after the move played to get its score
+            let afterAssessment = try await evaluate(fen: nextFEN, depth: depth)
+            let afterScore = centipawnValue(of: afterAssessment.score)
+
+            // Centipawn loss: the score drop from the side-to-move's perspective
+            // After the move, the score is from the opponent's perspective, so negate it
+            let scoreAfterMove = -afterScore
+            let cpLoss = max(0, bestScore - scoreAfterMove)
+
+            // Move number: fullmove number from FEN
+            let moveNumber = parseMoveNumber(fen: currentFEN)
+
+            let analyzedMove = AnalyzedMove(
+                moveNumber: moveNumber,
+                fen: currentFEN,
+                movePlayed: movePlayed,
+                bestMove: assessment.bestMove,
+                assessment: assessment,
+                classification: .good, // stub — LE-05
+                centipawnLoss: cpLoss
+            )
+
+            analyzedMoves.append(analyzedMove)
+        }
+
+        return GameAnalysis(
+            analyzedMoves: analyzedMoves,
+            accuracy: Accuracy(white: 0, black: 0),    // stub — LE-06
+            phases: GamePhases(opening: 0...0, middlegame: 0...0, endgame: 0...0) // stub — LE-08
+        )
+    }
+
+    // MARK: - Helpers
+
+    private func centipawnValue(of score: Score) -> Int {
+        switch score {
+        case .centipawns(let cp):
+            return cp
+        case .mate(let n):
+            // Large value so mate is always better/worse than any cp score
+            return n > 0 ? 10000 - n : -10000 - n
+        }
+    }
+
+    private func parseMoveNumber(fen: String) -> Int {
+        let fields = fen.split(separator: " ")
+        guard fields.count >= 6, let n = Int(fields[5]) else { return 1 }
+        return n
+    }
+
     // MARK: - C Bridge
 
     private static func assessPosition(fen: String, depth: Int) throws -> PositionAssessment {

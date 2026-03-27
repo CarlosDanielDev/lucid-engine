@@ -6,4 +6,6 @@ public enum EngineError: Error, Sendable, Equatable {
     case invalidFEN(String)
     case evaluationTimeout
     case analysisInterrupted
+    case emptyFENArray
+    case insufficientPositions
 }
