@@ -66,6 +66,7 @@ public actor LucidEngine {
                     group.cancelAll()
                     return assessment
                 } else {
+                    sf_stop_search()
                     group.cancelAll()
                     throw EngineError.evaluationTimeout
                 }
@@ -113,7 +114,9 @@ public actor LucidEngine {
                 String(cString: buf)
             }
         }
-        let bestMove = Move(uci: bestMoveStr) ?? Move(from: "a1", to: "a1")
+        guard let bestMove = Move(uci: bestMoveStr) else {
+            throw EngineError.analysisInterrupted
+        }
 
         var principalVariation: [Move] = []
         let pvLength = min(Int(result.pv_length), Int(SF_MAX_PV_LENGTH))

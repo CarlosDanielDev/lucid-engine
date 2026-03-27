@@ -88,11 +88,12 @@ struct BridgingHeaderTests {
 
     // MARK: - Lifecycle
 
-    @Test("sf_init returns SF_OK on first call")
-    func initReturnsOK() {
+    @Test("sf_init returns SF_OK or SF_ERR_ALREADY_INIT")
+    func initReturnsOKOrAlreadyInit() {
         sf_cleanup()
         let status = sf_init()
-        #expect(status == SF_OK)
+        // With ref counting, concurrent test suites may already hold a ref
+        #expect(status == SF_OK || status == SF_ERR_ALREADY_INIT)
         sf_cleanup()
     }
 
@@ -182,7 +183,7 @@ struct BridgingHeaderTests {
         sf_cleanup()
     }
 
-    // MARK: - Successful Assessment (Stub)
+    // MARK: - Successful Assessment
 
     @Test("sf_assess_position returns SF_OK with valid inputs")
     func assessReturnsOK() {
@@ -194,8 +195,8 @@ struct BridgingHeaderTests {
         sf_cleanup()
     }
 
-    @Test("Stub returns centipawn score type")
-    func stubReturnsCentipawns() {
+    @Test("Starting position returns centipawn score type")
+    func startingPositionReturnsCentipawnScore() {
         sf_cleanup()
         _ = sf_init()
         var result = SFAssessResult()
@@ -204,8 +205,8 @@ struct BridgingHeaderTests {
         sf_cleanup()
     }
 
-    @Test("Stub returns requested depth")
-    func stubReturnsRequestedDepth() {
+    @Test("Engine returns requested depth")
+    func engineReturnsRequestedDepth() {
         sf_cleanup()
         _ = sf_init()
         var result = SFAssessResult()
@@ -214,16 +215,17 @@ struct BridgingHeaderTests {
         sf_cleanup()
     }
 
-    @Test("Stub writes zero score and empty PV")
-    func stubWritesZeroFields() {
+    @Test("Real engine returns non-zero results for starting position")
+    func realEngineReturnsNonZeroResults() {
         sf_cleanup()
         _ = sf_init()
         var result = SFAssessResult()
-        _ = sf_assess_position(Self.startingFEN, 1, &result)
-        #expect(result.score == 0)
-        #expect(result.pv_length == 0)
-        #expect(result.nodes == 0)
-        #expect(result.best_move.0 == 0)
+        let status = sf_assess_position(Self.startingFEN, 1, &result)
+        #expect(status == SF_OK)
+        #expect(result.score_type == SF_SCORE_CENTIPAWNS)
+        #expect(result.pv_length >= 1)
+        #expect(result.nodes > 0)
+        #expect(result.best_move.0 != 0) // has a best move
         sf_cleanup()
     }
 }

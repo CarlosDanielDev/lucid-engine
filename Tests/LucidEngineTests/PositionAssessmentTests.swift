@@ -9,6 +9,17 @@ import CStockfish
 @Suite("Position Assessment", .serialized)
 struct PositionAssessmentTestSuite {
 
+    /// Shared engine factory for integration tests (30s timeout for debug builds).
+    static func makeIntegrationEngine() throws -> LucidEngine {
+        let config = try EngineConfiguration(
+            defaultDepth: 18,
+            threadCount: 1,
+            hashSizeMB: 64,
+            timeoutSeconds: 30.0
+        )
+        return LucidEngine(configuration: config)
+    }
+
     // ============================================================
     // MARK: - FEN Validation — evaluate()
     // ============================================================
@@ -343,16 +354,15 @@ struct PositionAssessmentTestSuite {
     // ============================================================
     // MARK: - Integration — Known Position Evaluations
     // ============================================================
-    // These tests require REAL Stockfish (not the stub).
-    // They will FAIL until sf_assess_position is wired to Stockfish.
 
-    @Suite("Integration — Evaluation Correctness",
-           .disabled("Requires real Stockfish — C stub returns zeroed results"))
+    @Suite("Integration — Evaluation Correctness")
     struct EvaluationCorrectnessTests {
+
+
 
         @Test("starting position score is roughly equal (< 50cp)")
         func startingPositionIsRoughlyEqual() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let result = try await engine.evaluate(
@@ -372,7 +382,7 @@ struct PositionAssessmentTestSuite {
 
         @Test("rook up for white is significant advantage")
         func rookUpIsSignificantAdvantage() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let rookUpFEN = "4k3/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1"
@@ -393,13 +403,14 @@ struct PositionAssessmentTestSuite {
     // MARK: - Integration — Mate Detection
     // ============================================================
 
-    @Suite("Integration — Mate Detection",
-           .disabled("Requires real Stockfish — C stub returns zeroed results"))
+    @Suite("Integration — Mate Detection")
     struct MateDetectionTests {
+
+
 
         @Test("mate-in-1 returns Score.mate(1)")
         func mateInOneReturnsMateScore() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let mateIn1FEN = "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"
@@ -416,7 +427,7 @@ struct PositionAssessmentTestSuite {
 
         @Test("mate-in-1 best move is e1e8")
         func mateInOneBestMoveIsRe8() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let mateIn1FEN = "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"
@@ -429,7 +440,7 @@ struct PositionAssessmentTestSuite {
 
         @Test("mate-in-2 returns Score.mate")
         func mateInTwoReturnsMateScore() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let mateIn2FEN = "7k/6rQ/6K1/8/8/8/8/6R1 w - - 0 1"
@@ -449,13 +460,14 @@ struct PositionAssessmentTestSuite {
     // MARK: - Integration — bestMove() Correctness
     // ============================================================
 
-    @Suite("Integration — bestMove() Correctness",
-           .disabled("Requires real Stockfish — C stub returns zeroed results"))
+    @Suite("Integration — bestMove() Correctness")
     struct BestMoveCorrectnessTests {
+
+
 
         @Test("bestMove in starting position is a valid UCI move")
         func bestMoveInStartingPositionIsValidUCI() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let move = try await engine.bestMove(
@@ -470,7 +482,7 @@ struct PositionAssessmentTestSuite {
 
         @Test("bestMove for mate-in-1 is e1e8")
         func bestMoveForMateInOneIsRe8() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let mateIn1FEN = "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"
@@ -483,7 +495,7 @@ struct PositionAssessmentTestSuite {
 
         @Test("bestMove captures hanging queen")
         func bestMoveCapturesHangingQueen() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
             let hangingQueenFEN = "4k3/8/8/8/3q4/2P5/P7/4K3 w - - 0 1"
@@ -496,15 +508,16 @@ struct PositionAssessmentTestSuite {
 
         @Test("bestMove for pawn promotion picks queen")
         func bestMoveForPromotion() async throws {
-            let engine = LucidEngine()
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
             try await engine.start()
 
-            let promotionFEN = "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1"
+            // Pawn on a7, black king on c8, clear path for promotion
+            let promotionFEN = "2k5/P7/8/8/8/8/8/4K3 w - - 0 1"
             let move = try await engine.bestMove(fen: promotionFEN, depth: 8)
 
             #expect(move.promotion == "q")
-            #expect(move.from == "e7")
-            #expect(move.to == "e8")
+            #expect(move.from == "a7")
+            #expect(move.to == "a8")
 
             await engine.shutdown()
         }
@@ -513,12 +526,8 @@ struct PositionAssessmentTestSuite {
     // ============================================================
     // MARK: - Timeout Handling
     // ============================================================
-    // The C stub returns instantly (synchronous), so the timeout
-    // race will always lose. These tests require REAL Stockfish
-    // to produce a meaningful timeout scenario.
 
-    @Suite("Timeout Handling",
-           .disabled("Requires real Stockfish — C stub returns instantly, timeout never fires"))
+    @Suite("Timeout Handling")
     struct TimeoutHandlingTests {
 
         @Test("evaluate with absurdly short timeout throws evaluationTimeout")
