@@ -142,23 +142,40 @@ public actor LucidEngine {
         guard isRunning else { throw EngineError.engineNotRunning }
     }
 
-    public func assess(fen: String, depth: Int) async throws -> PositionAssessment {
-        // Actor isolation guarantees this runs serially
-        // No two assessments can overlap
+    public func evaluate(fen: String, depth: Int = 18) async throws -> PositionAssessment {
+        // Actor isolation guarantees serial access -- no two assessments can overlap.
+        // FEN and depth are validated before the C call.
+        // A TaskGroup races the assessment against a configurable timeout.
         try ensureRunning()
-        var result = SFAssessResult()
-        let status = sf_assess_position(fen, Int32(depth), &result)
-        guard status == SF_OK else { throw EngineError.initializationFailed }
-        return PositionAssessment(from: result)
+        try Self.validateFEN(fen)
+        try Self.validateDepth(depth)
+        return try await withThrowingTaskGroup(of: PositionAssessment.self) { group in
+            group.addTask { try Self.assessPosition(fen: fen, depth: depth) }
+            group.addTask { [configuration] in
+                try await Task.sleep(for: .seconds(configuration.timeoutSeconds))
+                throw EngineError.evaluationTimeout
+            }
+            guard let result = try await group.next() else {
+                throw EngineError.evaluationTimeout
+            }
+            group.cancelAll()
+            return result
+        }
+    }
+
+    public func bestMove(fen: String, depth: Int = 18) async throws -> Move {
+        let assessment = try await evaluate(fen: fen, depth: depth)
+        return assessment.bestMove
     }
 }
 ```
 
 Benefits:
 - **Thread safety by construction** -- no locks, no races, no forgotten mutexes
-- **Natural async/await** -- callers just `await engine.assess(fen:depth:)`
+- **Natural async/await** -- callers just `await engine.evaluate(fen:depth:)` or `await engine.bestMove(fen:depth:)`
 - **Cooperative cancellation** -- `Task.isCancelled` checked between assessments
 - **Backpressure** -- actor mailbox naturally queues requests
+- **Timeout** -- each evaluation races against `configuration.timeoutSeconds` (default 5.0s) via `withThrowingTaskGroup`
 
 ---
 
@@ -263,7 +280,7 @@ let assessment = Assessment(from: result)  // copy fields into Swift value type
 |              Main Actor                   |
 |  (SwiftUI / Consumer code)               |
 |                                           |
-|  let result = await engine.assess(fen)   |
+|  let result = await engine.evaluate(fen)  |
 +-------------------+----------------------+
                     | await (suspends, non-blocking)
                     v

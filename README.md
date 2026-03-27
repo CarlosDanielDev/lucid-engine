@@ -39,11 +39,16 @@ Or in Xcode: File -> Add Package Dependencies -> enter the repository URL.
 import LucidEngine
 
 let engine = LucidEngine()
+try await engine.start()
 
 // Evaluate the starting position
-let eval = try await engine.evaluate(fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-print(eval.score)        // .centipawns(20) -- slight white advantage
-print(eval.bestMove.uci) // "e2e4"
+let assessment = try await engine.evaluate(fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+print(assessment.score)        // .centipawns(20) -- slight white advantage
+print(assessment.bestMove.uci) // "e2e4"
+
+// Or just get the best move directly
+let move = try await engine.bestMove(fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+print(move.uci) // "e2e4"
 ```
 
 ### Analyze a Complete Game
@@ -69,18 +74,18 @@ for move in analysis.analyzedMoves {
 
 | Type | Description |
 |------|-------------|
-| `LucidEngine` | Actor -- main entry point for all evaluations |
-| `Evaluation` | Score, best move, principal variation, depth, nodes |
+| `LucidEngine` | Actor -- main entry point; `start()`, `shutdown()`, `evaluate(fen:depth:)`, `bestMove(fen:depth:)` |
+| `PositionAssessment` | Score, best move, principal variation, depth, nodes -- returned by `evaluate()` |
 | `Score` | `.centipawns(Int)` or `.mate(Int)` |
-| `Move` | From/to squares, promotion, UCI notation |
-| `GameAnalysis` | Full game result: analyzed moves, accuracy, phases |
-| `AnalyzedMove` | Per-move evaluation, classification, centipawn loss |
-| `MoveClassification` | brilliant / great / good / book / inaccuracy / mistake / blunder |
-| `Accuracy` | White and black accuracy percentages |
-| `WinProbability` | Win / draw / loss probabilities |
-| `GamePhases` | Opening / middlegame / endgame move ranges |
-| `EngineConfiguration` | defaultDepth, threadCount, hashSizeMB with validation preconditions |
-| `EngineError` | initializationFailed, engineNotRunning, invalidDepth, invalidFEN(String), invalidConfiguration(String), evaluationTimeout, analysisInterrupted |
+| `Move` | From/to squares, optional promotion piece, UCI notation |
+| `EngineConfiguration` | `defaultDepth` (1...100), `threadCount` (1...64), `hashSizeMB` (1...4096), `timeoutSeconds` (>0, default 5.0) |
+| `EngineError` | `initializationFailed`, `engineNotRunning`, `invalidDepth(Int)`, `invalidFEN(String)`, `invalidConfiguration(String)`, `evaluationTimeout`, `analysisInterrupted` |
+| `GameAnalysis` | [planned] Full game result: analyzed moves, accuracy, phases |
+| `AnalyzedMove` | [planned] Per-move evaluation, classification, centipawn loss |
+| `MoveClassification` | [planned] brilliant / great / good / book / inaccuracy / mistake / blunder |
+| `Accuracy` | [planned] White and black accuracy percentages |
+| `WinProbability` | [planned] Win / draw / loss probabilities |
+| `GamePhases` | [planned] Opening / middlegame / endgame move ranges |
 
 ## Requirements
 

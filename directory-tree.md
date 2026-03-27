@@ -39,14 +39,13 @@ lucid-engine/
 │   │       └── (stockfish sources)  # [planned] Stockfish C++ source files
 │   └── LucidEngine/                  # Swift public API target
 │       ├── Engine/
-│       │   ├── LucidEngine.swift     # Actor -- configuration, isRunning, start/shutdown/ensureRunning (Issue #3)
+│       │   ├── LucidEngine.swift     # Actor -- evaluate(fen:depth:)/bestMove(fen:depth:) with FEN+depth validation, timeout via TaskGroup, C bridge mapping (Issue #3, #5)
 │       │   └── EngineError.swift     # EngineError: initializationFailed, engineNotRunning, invalidDepth, invalidFEN(String), invalidConfiguration(String), evaluationTimeout, analysisInterrupted -- Equatable, Sendable (Issue #3, #4)
 │       ├── Models/
-│       │   ├── EngineConfiguration.swift  # defaultDepth/threadCount/hashSizeMB with preconditions (Issue #3)
+│       │   ├── EngineConfiguration.swift  # defaultDepth/threadCount/hashSizeMB/timeoutSeconds(Double, default 5.0) with preconditions (Issue #3, #5)
 │       │   ├── Score.swift           # Score enum: .centipawns(Int) / .mate(Int) -- Sendable, Equatable (Issue #4)
 │       │   ├── Move.swift            # Move struct: from/to/promotion, UCI init and computed property -- Sendable, Equatable (Issue #4)
 │       │   ├── PositionAssessment.swift  # PositionAssessment struct: score/bestMove/principalVariation/depth/nodes -- Sendable, Equatable (Issue #4)
-│       │   ├── Evaluation.swift      # [planned] Single position result
 │       │   ├── MoveClassification.swift  # [planned] brilliant → blunder enum
 │       │   ├── AnalyzedMove.swift    # [planned] Per-move analysis result
 │       │   ├── GameAnalysis.swift    # [planned] Full game result
@@ -65,6 +64,7 @@ lucid-engine/
 │       ├── BridgingHeaderTests.swift            # 25 tests: constants, enums, lifecycle, preconditions (Issue #2)
 │       ├── LucidEngineLifecycleTests.swift      # 16 lifecycle tests: config, start, shutdown, restart, ensureRunning (Issue #3)
 │       ├── CoreModelsTests.swift                # 98 tests across 7 suites: Score, Move, PositionAssessment, EngineError updated cases (Issue #4)
+│       ├── PositionAssessmentTests.swift        # 10 suites: FEN validation, depth validation, default params, score mapping, integration, mate detection, bestMove, timeout, actor isolation (Issue #5)
 │       ├── MoveClassificationTests.swift        # [planned] CPL → classification mapping
 │       ├── GameAnalysisTests.swift              # [planned] Full pipeline tests
 │       └── PerformanceBenchmarkTests.swift      # [planned] Timing & memory benchmarks
@@ -84,4 +84,5 @@ lucid-engine/
 | #2 | Stockfish C bridging header -- SFStatus, SFScoreType, SFAssessResult, stub impl, 25 tests | Done |
 | #3 | LucidEngine actor with init/start/stop lifecycle -- EngineConfiguration, isRunning, ensureRunning(), 16 tests | Done |
 | #4 | Core models: Score, Move, PositionAssessment, EngineError extended cases -- 98 tests across 7 suites | Done |
-| #5 | Game analysis pipeline and move classification | Planned |
+| #5 | Single position assessment -- evaluate(fen:depth:), bestMove(fen:depth:), FEN/depth validation, timeout, C bridge mapping, 10 test suites | Done |
+| #6 | Game analysis pipeline and move classification | Planned |

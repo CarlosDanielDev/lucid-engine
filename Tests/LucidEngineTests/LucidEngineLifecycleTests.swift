@@ -12,12 +12,13 @@ struct LucidEngineLifecycleTests {
 
     // MARK: - Configuration
 
-    @Test("Default configuration uses depth 18, 1 thread, 64 MB hash")
+    @Test("Default configuration uses depth 18, 1 thread, 64 MB hash, 5s timeout")
     func defaultConfiguration() {
         let config = EngineConfiguration.default
         #expect(config.defaultDepth == 18)
         #expect(config.threadCount == 1)
         #expect(config.hashSizeMB == 64)
+        #expect(config.timeoutSeconds == 5.0)
     }
 
     @Test("Custom configuration stores values correctly")
