@@ -122,13 +122,19 @@ public actor LucidEngine {
             // Move number: fullmove number from FEN
             let moveNumber = parseMoveNumber(fen: currentFEN)
 
+            let classification = MoveClassifier.classify(
+                centipawnLoss: cpLoss,
+                scoreBefore: assessment.score,
+                scoreAfter: afterAssessment.score
+            )
+
             let analyzedMove = AnalyzedMove(
                 moveNumber: moveNumber,
                 fen: currentFEN,
                 movePlayed: movePlayed,
                 bestMove: assessment.bestMove,
                 assessment: assessment,
-                classification: .good, // stub — LE-05
+                classification: classification,
                 centipawnLoss: cpLoss
             )
 
