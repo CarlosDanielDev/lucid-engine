@@ -20,3 +20,6 @@ public struct PositionAssessment: Sendable, Equatable {
         self.nodes = nodes
     }
 }
+
+/// Alias matching the public API surface described in the design docs.
+public typealias Evaluation = PositionAssessment

@@ -27,19 +27,19 @@ LucidEngine bridges this gap: a Swift Package that wraps Stockfish via pipe-base
 
 ## Feature Inventory
 
-| ID | Feature | Priority | Phase |
-|----|---------|----------|-------|
-| LE-01 | Core engine initialization and lifecycle | P0 | 0 - Foundation |
-| LE-02 | Single position assessment (FEN in, centipawn score out) | P0 | 0 - Foundation |
-| LE-03 | Best move calculation with principal variation | P0 | 1 - Core Analysis |
-| LE-04 | Game analysis pipeline (array of FENs in, analyzed moves out) | P1 | 1 - Core Analysis |
-| LE-05 | Move classification (brilliant/great/good/inaccuracy/mistake/blunder) | P1 | 1 - Core Analysis |
-| LE-06 | Accuracy calculation per player | P1 | 1 - Core Analysis |
-| LE-07 | Win probability curve generation | P1 | 2 - Advanced |
-| LE-08 | Game phase detection (opening/middlegame/endgame) | P2 | 2 - Advanced |
-| LE-09 | Progressive depth analysis (quick preview + deep analysis) | P2 | 2 - Advanced |
-| LE-10 | Opening book / theory detection | P3 | 3 - AI-Powered |
-| LE-11 | Natural language move explanations via AI | P3 | 3 - AI-Powered (future premium) |
+| ID | Feature | Priority | Phase | Status |
+|----|---------|----------|-------|--------|
+| LE-01 | Core engine initialization and lifecycle | P0 | 0 - Foundation | Done |
+| LE-02 | Single position assessment (FEN in, centipawn score + PositionAssessment out) | P0 | 0 - Foundation | Done |
+| LE-03 | Best move calculation with principal variation | P0 | 0 - Foundation | Done |
+| LE-04 | Game analysis pipeline (array of FENs in, analyzed moves out) | P1 | 1 - Core Analysis | Planned |
+| LE-05 | Move classification (brilliant/great/good/inaccuracy/mistake/blunder) | P1 | 1 - Core Analysis | Planned |
+| LE-06 | Accuracy calculation per player | P1 | 1 - Core Analysis | Planned |
+| LE-07 | Win probability curve generation | P1 | 2 - Advanced | Planned |
+| LE-08 | Game phase detection (opening/middlegame/endgame) | P2 | 2 - Advanced | Planned |
+| LE-09 | Progressive depth analysis (quick preview + deep analysis) | P2 | 2 - Advanced | Planned |
+| LE-10 | Opening book / theory detection | P3 | 3 - AI-Powered | Planned |
+| LE-11 | Natural language move explanations via AI | P3 | 3 - AI-Powered (future premium) | Planned |
 
 ## Dependency Graph
 
@@ -114,7 +114,7 @@ public actor LucidEngine {
     public func shutdown()
 
     /// Evaluate a single position
-    public func evaluate(fen: String, depth: Int = 18) async throws -> Evaluation
+    public func evaluate(fen: String, depth: Int = 18) async throws -> PositionAssessment
 
     /// Get the best move for a position
     public func bestMove(fen: String, depth: Int = 18) async throws -> Move
@@ -127,14 +127,15 @@ public actor LucidEngine {
 
 public struct EngineConfiguration: Sendable, Equatable {
     public static let `default`: EngineConfiguration
+    public let defaultDepth: Int     // default: 18, range: 1...100
     public let threadCount: Int      // default: 1, range: 1...64
     public let hashSizeMB: Int       // default: 64, range: 1...4096
-    public let defaultDepth: Int     // default: 18, range: 1...100
+    public let timeoutSeconds: Double // default: 5.0, must be > 0
 }
 
-// MARK: - Evaluation Result
+// MARK: - Assessment Result
 
-public struct Evaluation: Sendable {
+public struct PositionAssessment: Sendable, Equatable {
     public let score: Score
     public let bestMove: Move
     public let principalVariation: [Move]
@@ -171,7 +172,7 @@ public struct AnalyzedMove: Sendable {
     public let fen: String
     public let movePlayed: Move
     public let bestMove: Move
-    public let evaluation: Evaluation
+    public let assessment: PositionAssessment
     public let classification: MoveClassification
     public let centipawnLoss: Int
 }
@@ -211,7 +212,10 @@ public enum EngineError: Error, Sendable, Equatable {
     case initializationFailed
     case engineNotRunning
     case invalidDepth(Int)
-    case invalidFEN
+    case invalidFEN(String)
+    case invalidConfiguration(String)
+    case evaluationTimeout
+    case analysisInterrupted
 }
 ```
 
