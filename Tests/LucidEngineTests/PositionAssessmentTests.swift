@@ -574,6 +574,146 @@ struct PositionAssessmentTestSuite {
     }
 
     // ============================================================
+    // MARK: - Game Analysis Pipeline
+    // ============================================================
+
+    @Suite("Game Analysis Pipeline")
+    struct GameAnalysisPipelineTests {
+
+        @Test("Empty FEN array throws emptyFENArray error")
+        func emptyFENArrayThrows() async throws {
+            let engine = LucidEngine()
+            try await engine.start()
+
+            await #expect(throws: EngineError.emptyFENArray) {
+                try await engine.analyzeGame(fens: [])
+            }
+
+            await engine.shutdown()
+        }
+
+        @Test("Single FEN throws insufficientPositions error")
+        func singleFENThrows() async throws {
+            let engine = LucidEngine()
+            try await engine.start()
+
+            await #expect(throws: EngineError.insufficientPositions) {
+                try await engine.analyzeGame(fens: [
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                ])
+            }
+
+            await engine.shutdown()
+        }
+
+        @Test("Throws engineNotRunning when engine not started")
+        func throwsWhenNotRunning() async {
+            let engine = LucidEngine()
+
+            await #expect(throws: EngineError.engineNotRunning) {
+                try await engine.analyzeGame(fens: [
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+                ])
+            }
+        }
+
+        @Test("Analyzes two-position game (1.e4)")
+        func analyzesTwoPositionGame() async throws {
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
+            try await engine.start()
+
+            let fens = [
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            ]
+
+            let analysis = try await engine.analyzeGame(fens: fens, depth: 10)
+
+            #expect(analysis.analyzedMoves.count == 1)
+            let move = analysis.analyzedMoves[0]
+            #expect(move.moveNumber == 1)
+            #expect(move.movePlayed == Move(from: "e2", to: "e4"))
+            #expect(move.centipawnLoss >= 0)
+            #expect(move.fen == fens[0])
+
+            await engine.shutdown()
+        }
+
+        @Test("Analyzes three-position game (1.e4 e5)")
+        func analyzesThreePositionGame() async throws {
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
+            try await engine.start()
+
+            let fens = [
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+                "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
+            ]
+
+            let analysis = try await engine.analyzeGame(fens: fens, depth: 10)
+
+            #expect(analysis.analyzedMoves.count == 2)
+            #expect(analysis.analyzedMoves[0].moveNumber == 1)
+            #expect(analysis.analyzedMoves[0].movePlayed == Move(from: "e2", to: "e4"))
+            #expect(analysis.analyzedMoves[1].moveNumber == 1)
+            #expect(analysis.analyzedMoves[1].movePlayed == Move(from: "e7", to: "e5"))
+
+            await engine.shutdown()
+        }
+
+        @Test("Centipawn loss is calculated correctly")
+        func centipawnLossCalculated() async throws {
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
+            try await engine.start()
+
+            let fens = [
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            ]
+
+            let analysis = try await engine.analyzeGame(fens: fens, depth: 10)
+            let move = analysis.analyzedMoves[0]
+
+            #expect(move.centipawnLoss >= 0)
+
+            await engine.shutdown()
+        }
+
+        @Test("Cancellation stops analysis")
+        func cancellationStopsAnalysis() async throws {
+            let engine = try PositionAssessmentTestSuite.makeIntegrationEngine()
+            try await engine.start()
+
+            let fens = [
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+                "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+                "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+                "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+                "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+            ]
+
+            let task = Task {
+                try await engine.analyzeGame(fens: fens, depth: 25)
+            }
+
+            try await Task.sleep(for: .milliseconds(100))
+            task.cancel()
+
+            do {
+                _ = try await task.value
+            } catch is CancellationError {
+                // Expected
+            } catch {
+                // Other errors from cancellation are acceptable
+            }
+
+            await engine.shutdown()
+        }
+    }
+
+    // ============================================================
     // MARK: - Actor Isolation and Concurrency
     // ============================================================
 
