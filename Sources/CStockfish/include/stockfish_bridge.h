@@ -88,6 +88,14 @@ void sf_cleanup(void);
 /// This function MUST NOT write to stdout, stderr, or use dup2/freopen.
 SFStatus sf_assess_position(const char* fen, int depth, SFAssessResult* out_result);
 
+// ---------------------------------------------------------------------------
+// Cancellation
+// ---------------------------------------------------------------------------
+
+/// Cancel any in-progress search. Safe to call from any thread.
+/// No-op if no search is running or engine is not initialized.
+void sf_stop_search(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -69,6 +69,7 @@ typedef struct {
 SFStatus sf_init(void);
 void     sf_cleanup(void);
 SFStatus sf_assess_position(const char* fen, int depth, SFAssessResult* out_result);
+void     sf_stop_search(void);   // cancel any in-progress search; safe from any thread
 ```
 
 Stockfish's assessment runs in-process but never touches stdout. Results come back via a typed `SFStatus` return code and a caller-allocated `SFAssessResult` output parameter. This function is contractually forbidden from calling `dup2`, `freopen`, or writing to `stdout`/`stderr`.
@@ -355,9 +356,10 @@ class AnalysisViewModel: ObservableObject {
 - C library runs in-process, avoids stdout entirely, and is the fastest option (no IPC/serialization)
 
 **Consequences:**
-- Must modify Stockfish source to expose C-callable assessment functions
-- C++ compilation adds build complexity to SPM
-- Stockfish version upgrades require re-applying the bridging modifications
+- Stockfish 17.1 C++ sources are compiled directly into the CStockfish SPM target; `stockfish_bridge.cpp` exposes C-callable functions without modifying upstream Stockfish files
+- C++17 standard and custom `cxxSettings` are required in Package.swift (NDEBUG, USE_PTHREADS, IS_64BIT, USE_POPCNT, USE_NEON, header search paths for nnue/, syzygy/, incbin/)
+- NNUE weight files (.nnue) must be excluded from SPM's source compilation via the `exclude` list and loaded separately at runtime
+- Stockfish version upgrades require updating the files under `Sources/CStockfish/src/stockfish/` and re-verifying the bridge
 
 ### ADR-002: Actor-Based API Over Callback-Based
 
