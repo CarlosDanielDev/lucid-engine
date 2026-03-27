@@ -142,14 +142,14 @@ public actor LucidEngine {
         guard isRunning else { throw EngineError.engineNotRunning }
     }
 
-    public func assess(fen: String, depth: Int) async throws -> Assessment {
+    public func assess(fen: String, depth: Int) async throws -> PositionAssessment {
         // Actor isolation guarantees this runs serially
         // No two assessments can overlap
         try ensureRunning()
         var result = SFAssessResult()
         let status = sf_assess_position(fen, Int32(depth), &result)
         guard status == SF_OK else { throw EngineError.initializationFailed }
-        return Assessment(from: result)
+        return PositionAssessment(from: result)
     }
 }
 ```
