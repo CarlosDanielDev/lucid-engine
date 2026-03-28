@@ -156,6 +156,30 @@ public actor LucidEngine {
         )
     }
 
+    // MARK: - Progressive Analysis
+
+    /// Two-pass analysis: fast preview followed by deep analysis.
+    ///
+    /// The preview callback fires with shallow results for immediate feedback.
+    /// The final return value contains the full-depth analysis.
+    /// Supports cancellation between passes.
+    public func analyzeGameProgressive(
+        fens: [String],
+        previewDepth: Int = 10,
+        fullDepth: Int = 18,
+        onPreviewReady: @Sendable (GameAnalysis) -> Void
+    ) async throws -> GameAnalysis {
+        // Pass 1: Quick preview
+        let preview = try await analyzeGame(fens: fens, depth: previewDepth)
+        onPreviewReady(preview)
+
+        // Support cancellation between passes
+        try Task.checkCancellation()
+
+        // Pass 2: Full depth
+        return try await analyzeGame(fens: fens, depth: fullDepth)
+    }
+
     // MARK: - Helpers
 
     private func centipawnValue(of score: Score) -> Int {
