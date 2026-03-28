@@ -148,11 +148,14 @@ public actor LucidEngine {
             WinProbabilityCalculator.calculate(score: $0.assessment.score)
         }
 
+        let opening = OpeningBook.detect(fens: fens)
+
         return GameAnalysis(
             analyzedMoves: analyzedMoves,
             accuracy: accuracy,
             phases: phases,
-            winProbabilities: winProbabilities
+            winProbabilities: winProbabilities,
+            opening: opening
         )
     }
 
