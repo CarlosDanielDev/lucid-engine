@@ -143,10 +143,15 @@ public actor LucidEngine {
 
         let accuracy = AccuracyCalculator.calculate(from: analyzedMoves)
 
+        let winProbabilities = analyzedMoves.map {
+            WinProbabilityCalculator.calculate(score: $0.assessment.score)
+        }
+
         return GameAnalysis(
             analyzedMoves: analyzedMoves,
             accuracy: accuracy,
-            phases: GamePhases(opening: 0...0, middlegame: 0...0, endgame: 0...0) // stub — LE-08
+            phases: GamePhases(opening: 0...0, middlegame: 0...0, endgame: 0...0), // stub — LE-08
+            winProbabilities: winProbabilities
         )
     }
 
