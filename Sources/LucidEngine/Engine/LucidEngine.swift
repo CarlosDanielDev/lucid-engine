@@ -141,9 +141,11 @@ public actor LucidEngine {
             analyzedMoves.append(analyzedMove)
         }
 
+        let accuracy = AccuracyCalculator.calculate(from: analyzedMoves)
+
         return GameAnalysis(
             analyzedMoves: analyzedMoves,
-            accuracy: Accuracy(white: 0, black: 0),    // stub — LE-06
+            accuracy: accuracy,
             phases: GamePhases(opening: 0...0, middlegame: 0...0, endgame: 0...0) // stub — LE-08
         )
     }
