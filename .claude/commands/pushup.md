@@ -54,7 +54,6 @@ Closes #<issue-number>
 - [ ] `swift test` passes
 - [ ] <additional testing checklist items>
 
-Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
